@@ -20,7 +20,7 @@ type Args struct {
 	Burn           string        `arg:"-b,--burn" default:"1" help:"how much cpu to burn. Can be specified in 2 different ways: as a float/integer, representing how many cores/fraction of a core. Eg 1.5 means 1 core and a half; as a percentage, indicating total system capacity percentage. Eg on a 4 cores system, 100% means all 4 cores, 50% means 2 cores and 62.5% means 2 cores and a half"`
 	Duration       time.Duration `arg:"-d,--duration" default:"0" help:"for how long to run. Pass 0 to run indefinitely"`
 	NoLockOSThread bool          `arg:"-L,--no-lock-os-thread" default:"false" help:"by default each goroutine used to consume cpu tries to lock itself to a single OS thread, which will cause load to be concentrated on fewer cpus. This allows more precise/consistent results. Setting this flag disables that behaviour, allowing cpu load to be shared across different cpus"`
-	LogEvery       time.Duration `arg:"-l,--log-every" default:"5s" help:"how often to log actual cpu usage. Use 0 to disable it"`
+	LogEvery       time.Duration `arg:"-l,--log-every" default:"10s" help:"how often to log actual cpu usage. Use 0 to disable it"`
 	Quiet          bool          `arg:"-q,--quiet" default:"false" help:"run quietly, no stderr logging"`
 }
 
@@ -128,7 +128,7 @@ func burn(ctx context.Context, cpus float64, lockOSThread bool, logEvery time.Du
 					current := cpuTime()
 					cpuBurned := float64(current-previous) / float64(logEvery)
 					deltaPct := (cpuBurned - cpus) / cpus * 100
-					log.Printf("pid %d cpu usage: %f (%+.2f%% off)", os.Getpid(), cpuBurned, deltaPct)
+					log.Printf("pid %d cpu usage: %f (%+.2f%%)", os.Getpid(), cpuBurned, deltaPct)
 					previous = current
 				}
 			}
