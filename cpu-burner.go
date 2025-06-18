@@ -37,6 +37,10 @@ func main() {
 		parser.Fail(err.Error())
 	}
 
+	if cpus > float64(runtime.NumCPU()) {
+		log.Printf("WARNING: burn value %.2f is larger than the number of available CPUs (%.2f)", cpus, float64(runtime.NumCPU()))
+	}
+
 	ctx := context.Background()
 	if args.Duration > 0 {
 		var cancel context.CancelFunc
@@ -44,7 +48,7 @@ func main() {
 		defer cancel()
 		log.Printf("pid %d consuming %0.2f cpus for %d milliseconds", os.Getpid(), cpus, args.Duration/time.Millisecond)
 	} else {
-		log.Printf("pid %d consuming %0.2f cpus untill the process is interrupted", os.Getpid(), cpus)
+		log.Printf("pid %d consuming %0.2f cpus until the process is interrupted", os.Getpid(), cpus)
 	}
 
 	burn(ctx, cpus, !args.NoLockOSThread, args.LogEvery)
@@ -128,7 +132,7 @@ func burn(ctx context.Context, cpus float64, lockOSThread bool, logEvery time.Du
 					current := cpuTime()
 					cpuBurned := float64(current-previous) / float64(logEvery)
 					deltaPct := (cpuBurned - cpus) / cpus * 100
-					log.Printf("pid %d cpu usage: %f (%+.2f%%)", os.Getpid(), cpuBurned, deltaPct)
+					log.Printf("pid %d cpu usage: %.3f (%+.1f%%)", os.Getpid(), cpuBurned, deltaPct)
 					previous = current
 				}
 			}
