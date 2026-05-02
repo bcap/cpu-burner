@@ -3,8 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"io"
-	"log"
+	"log/slog"
 	"os"
 	"runtime"
 	"strconv"
@@ -21,16 +20,26 @@ type Args struct {
 	Duration       time.Duration `arg:"-d,--duration" default:"0" help:"for how long to run. Pass 0 to run indefinitely"`
 	NoLockOSThread bool          `arg:"--lock-os-thread" default:"false" help:"will make each goroutine used to consume cpu lock itself to a single OS thread, which should cause load to be concentrated on fewer cpus"`
 	LogEvery       time.Duration `arg:"-l,--log-every" default:"10s" help:"how often to log actual cpu usage. Use 0 to disable it"`
-	Quiet          bool          `arg:"-q,--quiet" default:"false" help:"run quietly, no stderr logging"`
+	Verbose        bool          `arg:"-v,--verbose" default:"false" help:"enable debug logging"`
+	Quiet          bool          `arg:"-q,--quiet" default:"false" help:"disable all logging"`
 }
 
 func main() {
 	args := Args{}
 	parser := arg.MustParse(&args)
 
-	if args.Quiet {
-		log.SetOutput(io.Discard)
+	level := slog.LevelInfo
+	if args.Verbose {
+		level = slog.LevelDebug
 	}
+	opts := &slog.HandlerOptions{Level: level}
+	var handler slog.Handler
+	if args.Quiet {
+		handler = slog.DiscardHandler
+	} else {
+		handler = slog.NewTextHandler(os.Stderr, opts)
+	}
+	slog.SetDefault(slog.New(handler))
 
 	cpus, err := parseBurn(args.Burn)
 	if err != nil {
@@ -38,7 +47,7 @@ func main() {
 	}
 
 	if cpus > float64(runtime.NumCPU()) {
-		log.Printf("WARNING: burn value %.2f is larger than the number of available CPUs (%.2f)", cpus, float64(runtime.NumCPU()))
+		slog.Warn("burn value exceeds available CPUs", "burn", cpus, "cpus", runtime.NumCPU())
 	}
 
 	ctx := context.Background()
@@ -46,9 +55,9 @@ func main() {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, args.Duration)
 		defer cancel()
-		log.Printf("pid %d consuming %0.2f cpus for %d milliseconds", os.Getpid(), cpus, args.Duration/time.Millisecond)
+		slog.Info("consuming cpus", "pid", os.Getpid(), "cpus", cpus, "duration_ms", args.Duration.Milliseconds())
 	} else {
-		log.Printf("pid %d consuming %0.2f cpus until the process is interrupted", os.Getpid(), cpus)
+		slog.Info("consuming cpus until interrupted", "pid", os.Getpid(), "cpus", cpus)
 	}
 
 	burn(ctx, cpus, !args.NoLockOSThread, args.LogEvery)
@@ -136,7 +145,7 @@ func burn(ctx context.Context, cpus float64, lockOSThread bool, logEvery time.Du
 							newRunFor = time.Duration(float64(runFor) * (1 - adjustmentFactor))
 						}
 						if newSleepFor != sleepFor {
-							// log.Printf("pid %d adjusting burn: %s -> %s / %s -> %s", os.Getpid(), runFor, newRunFor, sleepFor, newSleepFor)
+							slog.Debug("adjusting burn timings", "pid", os.Getpid(), "run_for", runFor, "new_run_for", newRunFor, "sleep_for", sleepFor, "new_sleep_for", newSleepFor)
 							sleepFor = newSleepFor
 							runFor = newRunFor
 						}
@@ -176,7 +185,7 @@ func burn(ctx context.Context, cpus float64, lockOSThread bool, logEvery time.Du
 					current := cpuTime()
 					cpuBurned := float64(current-previous) / float64(logEvery)
 					deltaPct := (cpuBurned - cpus) / cpus * 100
-					log.Printf("pid %d cpu usage: %.3f (%+.1f%% from target)", os.Getpid(), cpuBurned, deltaPct)
+					slog.Info("cpu usage", "pid", os.Getpid(), "cpus", fmt.Sprintf("%.3f", cpuBurned), "delta_pct", fmt.Sprintf("%+.1f%%", deltaPct))
 					previous = current
 				}
 			}
