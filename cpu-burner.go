@@ -154,7 +154,7 @@ func burn(ctx context.Context, cpus float64, lockOSThread bool, logEvery time.Du
 					}
 				}
 
-				// listen for ctx.Done() every 100 iterations to avoid doing it too often
+				// listen for ctx.Done() every few iterations to avoid doing it too often
 				if iterations%checkContextEveryXIterations == 0 {
 					select {
 					case <-ctx.Done():
