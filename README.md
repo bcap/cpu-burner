@@ -2,6 +2,16 @@
 
 A simple utility to simulate cpu intensive workloads
 
+## Installation
+
+Download a pre-built binary from the [releases page](https://github.com/bcap/cpu-burner/releases), or install via Go:
+
+```sh
+go install github.com/bcap/cpu-burner@latest
+```
+
+## Usage
+
 ```
 Usage: cpu-burner [--burn BURN] [--duration DURATION] [--no-lock-os-thread] [--log-every LOG-EVERY] [--quiet]
 
@@ -16,3 +26,15 @@ Options:
   --quiet, -q            run quietly, no stderr logging [default: false]
   --help, -h             display this help and exit
 ```
+
+## Releasing
+
+Releases are automated via GitHub Actions on version tags. To cut a release:
+
+```sh
+VERSON=v0.1.0
+git tag v${VERSION}
+git push origin ${VERSION}
+```
+
+GoReleaser will build binaries for linux/darwin × amd64/arm64 and publish a GitHub release.

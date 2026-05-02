@@ -1,4 +1,4 @@
-module cpu-burner
+module github.com/bcap/cpu-burner
 
 go 1.23
 
